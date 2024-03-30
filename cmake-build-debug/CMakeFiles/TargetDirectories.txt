@@ -1,0 +1,4 @@
+/home/iceloca/CLionProjects/kursac/cmake-build-debug/CMakeFiles/server.dir
+/home/iceloca/CLionProjects/kursac/cmake-build-debug/CMakeFiles/client.dir
+/home/iceloca/CLionProjects/kursac/cmake-build-debug/CMakeFiles/edit_cache.dir
+/home/iceloca/CLionProjects/kursac/cmake-build-debug/CMakeFiles/rebuild_cache.dir
