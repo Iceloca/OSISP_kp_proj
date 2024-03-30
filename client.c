@@ -34,7 +34,7 @@ int main() {
     scanf("%d", &data.player.coordinates.x);
     printf("Enter a number to send to the server: ");
     scanf("%d", &data.player.coordinates.y);
-
+    data.player.type = '1';
     do{
     // Send number to server
             received_number = - 1;

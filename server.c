@@ -1,9 +1,9 @@
+#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 #include <arpa/inet.h>
-#include <math.h>
 #include "structures.h"
 #define PORT 12345
 #define BUFFER_SIZE 1024
@@ -128,6 +128,7 @@ int main() {
         }
         procces_client_data(&gamedata,clientdata);
         process_bullets(&gamedata);
+        printf(" %d , %d \n", gamedata.player1.coordinates.x,gamedata.player1.coordinates.y);
     }
     // Close socket
     close(sockfd);

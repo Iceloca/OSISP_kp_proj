@@ -10,7 +10,7 @@ struct  coordinate {
     int16_t y;
 };
 
-struct bullet {
+struct bulleta {
     struct coordinate coordinates;
     struct coordinate vector;
     char owner;
