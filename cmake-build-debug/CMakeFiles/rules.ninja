@@ -61,7 +61,7 @@ rule CUSTOM_COMMAND
 # Rule for re-running cmake.
 
 rule RERUN_CMAKE
-  command = /home/iceloca/.local/share/JetBrains/Toolbox/apps/clion-nova/bin/cmake/linux/x64/bin/cmake --regenerate-during-build -S/home/iceloca/CLionProjects/kursac -B/home/iceloca/CLionProjects/kursac/cmake-build-debug
+  command = /home/iceloca/.local/share/JetBrains/Toolbox/apps/clion/bin/cmake/linux/x64/bin/cmake --regenerate-during-build -S/home/iceloca/CLionProjects/kursac -B/home/iceloca/CLionProjects/kursac/cmake-build-debug
   description = Re-running CMake...
   generator = 1
 
@@ -70,7 +70,7 @@ rule RERUN_CMAKE
 # Rule for cleaning all built files.
 
 rule CLEAN
-  command = /home/iceloca/.local/share/JetBrains/Toolbox/apps/clion-nova/bin/ninja/linux/x64/ninja $FILE_ARG -t clean $TARGETS
+  command = /home/iceloca/.local/share/JetBrains/Toolbox/apps/clion/bin/ninja/linux/x64/ninja $FILE_ARG -t clean $TARGETS
   description = Cleaning all built files...
 
 
@@ -78,6 +78,6 @@ rule CLEAN
 # Rule for printing all primary targets available.
 
 rule HELP
-  command = /home/iceloca/.local/share/JetBrains/Toolbox/apps/clion-nova/bin/ninja/linux/x64/ninja -t targets
+  command = /home/iceloca/.local/share/JetBrains/Toolbox/apps/clion/bin/ninja/linux/x64/ninja -t targets
   description = All primary targets available:
 
