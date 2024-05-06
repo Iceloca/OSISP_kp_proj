@@ -4,6 +4,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <arpa/inet.h>
+#include <fcntl.h>
 #include "structures.h"
 #define PORT 12345
 #define BUFFER_SIZE 1024
@@ -85,14 +86,9 @@ void procces_client_data (gamedata_t* gamedata, clientdata_t clientdata) {
 
 // Функция обработки снарядов
 
-
-int main() {
+int init_server_socket(){
     int sockfd;
-    struct sockaddr_in server_addr, client_addr;
-    socklen_t client_addr_len = sizeof(client_addr);
-    gamedata_t gamedata;
-    clientdata_t clientdata;
-
+    struct sockaddr_in server_addr;
     // Create UDP socket
     if ((sockfd = socket(AF_INET, SOCK_DGRAM, 0)) == -1) {
         perror("Socket creation failed");
@@ -111,7 +107,75 @@ int main() {
         close(sockfd);
         exit(EXIT_FAILURE);
     }
+    return sockfd;
+}
 
+
+void start_lobby(int sockfd,struct sockaddr_in* client_addr_1,struct sockaddr_in* client_addr_2) {
+    struct sockaddr_in new_client_addr;
+    socklen_t client_addr_len;
+    char player = '0';
+    char signal = 0;
+    client_addr_len = sizeof (new_client_addr);
+    if (recvfrom(sockfd, &signal, sizeof(signal), 0, (struct sockaddr *)&new_client_addr, &client_addr_len) == -1) {
+        perror("Receive error");
+        close(sockfd);
+        exit(EXIT_FAILURE);
+    }
+    switch (signal) {
+        case 0:
+            if (sendto(sockfd, &player, sizeof(player), 0, (struct sockaddr *) &new_client_addr,
+                       sizeof(new_client_addr)) == -1) {
+                perror("Sendto failed");
+                close(sockfd);
+                exit(EXIT_FAILURE);
+            }
+            break;
+        case 1:
+            if(player != '1' && player <'3') {
+                *client_addr_1 = new_client_addr;
+                player += 1;
+            }
+            break;
+        case 2:
+            if(player != '2' && player <'3') {
+                *client_addr_2 = new_client_addr;
+                player += 2;
+            }
+            break;
+        default:
+            break;
+    }
+    if(player == '3'){
+        signal = 'r';
+        if (sendto(sockfd, &signal, sizeof(signal), 0, (struct sockaddr *) client_addr_1,
+                   sizeof(*client_addr_1)) == -1) {
+            perror("Sendto failed");
+            close(sockfd);
+            exit(EXIT_FAILURE);
+        }
+        if (sendto(sockfd, &signal, sizeof(signal), 0, (struct sockaddr *) client_addr_2,
+                   sizeof(*client_addr_2)) == -1) {
+            perror("Sendto failed");
+            close(sockfd);
+            exit(EXIT_FAILURE);
+        }
+        return;
+    }
+
+}
+
+int main() {
+    int sockfd;
+    struct sockaddr_in server_addr, client_addr, client_addr_1, client_addr_2;
+    socklen_t client_addr_len = sizeof(client_addr);
+    gamedata_t gamedata;
+    clientdata_t clientdata;
+
+    sockfd = init_server_socket();
+    start_lobby(sockfd, &client_addr_1, &client_addr_2);
+    if(fcntl(sockfd,F_SETFL, O_NONBLOCK) == -1)
+        perror("NON_BLOCK error");
     printf("Server listening on port %d...\n", PORT);
     while(1) {
         // Receive number from client
@@ -128,8 +192,26 @@ int main() {
         }
         procces_client_data(&gamedata,clientdata);
         process_bullets(&gamedata);
-        printf(" %d , %d \n", gamedata.player1.coordinates.x,gamedata.player1.coordinates.y);
+        if (sendto(sockfd, &gamedata, sizeof(gamedata), 0, (struct sockaddr *) &client_addr_1, sizeof(client_addr_1)) ==
+            -1) {
+            perror("Sendto failed");
+            close(sockfd);
+            exit(EXIT_FAILURE);
+        }
+
+        printf(" %d , %d \n", gamedata.player1.coordinates.x, gamedata.player1.coordinates.y);
+
+        if (sendto(sockfd, &gamedata, sizeof(gamedata), 0, (struct sockaddr *) &client_addr_2,
+                   sizeof(client_addr_2)) == -1) {
+            perror("Sendto failed");
+            close(sockfd);
+            exit(EXIT_FAILURE);
+        }
+        printf(" %d , %d \n", gamedata.player2.coordinates.x, gamedata.player2.coordinates.y);
+
+
     }
+
     // Close socket
     close(sockfd);
 
