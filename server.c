@@ -5,6 +5,7 @@
 #include <unistd.h>
 #include <arpa/inet.h>
 #include <fcntl.h>
+#include <errno.h>
 #include "structures.h"
 #define PORT 12345
 #define BUFFER_SIZE 1024
@@ -130,15 +131,17 @@ void start_lobby(int sockfd,struct sockaddr_in* client_addr_1,struct sockaddr_in
                 break;
             case '1':
                 if (player != '1' && player < '3') {
-                    *client_addr_1 = new_client_addr;
                     player += 1;
+                    *client_addr_1 = new_client_addr;
                 }
+
                 break;
             case '2':
                 if (player != '2' && player < '3') {
-                    *client_addr_2 = new_client_addr;
                     player += 2;
+                    *client_addr_2 = new_client_addr;
                 }
+
                 break;
             default:
                 break;
@@ -187,9 +190,11 @@ int main() {
     while(1) {
         // Receive number from client
         if (recvfrom(sockfd, &clientdata, sizeof(clientdata), 0, (struct sockaddr *)&client_addr, &client_addr_len) == -1) {
-            perror("Receive error");
-            close(sockfd);
-            exit(EXIT_FAILURE);
+            if( errno != EWOULDBLOCK) {
+                perror("Receive error");
+                close(sockfd);
+                exit(EXIT_FAILURE);
+            }
         }
         int success_signal = 0;
         if (sendto(sockfd, &success_signal, sizeof(success_signal), 0, (struct sockaddr *)&client_addr, client_addr_len) == -1) {
