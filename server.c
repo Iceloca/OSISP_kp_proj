@@ -143,12 +143,8 @@ void start_lobby(int sockfd,struct sockaddr_in* client_addr_1,struct sockaddr_in
             default:
                 break;
         }
-        if (sendto(sockfd, &player, sizeof(player), 0, (struct sockaddr *) &new_client_addr,
-                   sizeof(new_client_addr)) == -1) {
-            perror("Sendto failed");
-            close(sockfd);
-            exit(EXIT_FAILURE);
-        }
+
+
         if (player == '3') {
             signal = 'r';
             if (sendto(sockfd, &signal, sizeof(signal), 0, (struct sockaddr *) client_addr_1,
@@ -164,6 +160,13 @@ void start_lobby(int sockfd,struct sockaddr_in* client_addr_1,struct sockaddr_in
                 exit(EXIT_FAILURE);
             }
             return;
+        }else{
+            if (sendto(sockfd, &player, sizeof(player), 0, (struct sockaddr *) &new_client_addr,
+                       sizeof(new_client_addr)) == -1) {
+                perror("Sendto failed");
+                close(sockfd);
+                exit(EXIT_FAILURE);
+            }
         }
     }while (signal != 'r');
 
