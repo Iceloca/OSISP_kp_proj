@@ -1,3 +1,4 @@
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -5,8 +6,7 @@
 #include <arpa/inet.h>
 #include <fcntl.h>
 #include <errno.h>
-#include "server_structures.h"
-
+#include "client.h"
 
 int initialize_client(int port){
     int sockfd;
@@ -29,28 +29,27 @@ int initialize_client(int port){
         exit(EXIT_FAILURE);
     }
 
-    if(fcntl(sockfd,F_SETFL, O_NONBLOCK) == -1)
-        perror("NON_BLOCK error");
+
     return sockfd;
 }
+void make_nonblock(int sockfd){
+    if(fcntl(sockfd,F_SETFL, O_NONBLOCK) == -1)
+        perror("NON_BLOCK error");
+}
 
-void initialize_server(int port, char* server_ip, struct sockaddr_in* destination_addr){
-    memset(destination_addr, 0, sizeof(*destination_addr));
-    destination_addr->sin_family = AF_INET;
-    destination_addr->sin_port = htons(port);
+void initialize_server(int port,const char* server_ip, struct sockaddr_in* server_addr){
+    memset(server_addr, 0, sizeof(*server_addr));
+    server_addr->sin_family = AF_INET;
+    server_addr->sin_port = htons(port);
 
-    if (inet_pton(AF_INET, server_ip, &destination_addr->sin_addr) <= 0) {
+    if (inet_pton(AF_INET, server_ip, &server_addr->sin_addr) <= 0) {
         perror("Invalid address/ Address not supported");
         exit(EXIT_FAILURE);
     }
 }
 
 void send_client_data(client_data_t data, int sockfd, struct sockaddr_in server_addr){
-    fcntl(sockfd,F_SETFL, 0);
-
     int received_number;
-    printf("Received response from server: %d\n", received_number);
-
     do{
         // Send number to server
         received_number = - 1;
@@ -76,9 +75,6 @@ void send_client_data(client_data_t data, int sockfd, struct sockaddr_in server_
 }
 
 void receive_game_data(game_data_t * data, int sockfd, struct sockaddr_in server_addr){
-
-    fcntl(sockfd,F_SETFL, O_NONBLOCK);
-
     int count = recv(sockfd, data, sizeof(*data), 0);
     if (count == -1) {
         if(errno != EWOULDBLOCK) {
@@ -90,5 +86,4 @@ void receive_game_data(game_data_t * data, int sockfd, struct sockaddr_in server
         printf("Received response from server: %d\n", data->player1.coordinates.x);
     }
 }
-
 
