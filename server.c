@@ -183,7 +183,7 @@ int main() {
     socklen_t client_addr_len = sizeof(client_addr);
     gamedata_t gamedata;
     clientdata_t clientdata;
-
+    size_t size = 0;
     sockfd = init_server_socket();
     start_lobby(sockfd, &client_addr_1, &client_addr_2);
     if(fcntl(sockfd,F_SETFL, O_NONBLOCK) == -1)
@@ -191,18 +191,22 @@ int main() {
     printf("Server listening on port %d...\n", PORT);
     while(1) {
         // Receive number from client
-        if (recvfrom(sockfd, &clientdata, sizeof(clientdata), 0, (struct sockaddr *)&client_addr, &client_addr_len) == -1) {
+
+        size = recvfrom(sockfd, &clientdata, sizeof(clientdata), 0, (struct sockaddr *)&client_addr, &client_addr_len);
+        if (size == -1) {
             if( errno != EWOULDBLOCK) {
                 perror("Receive error");
                 close(sockfd);
                 exit(EXIT_FAILURE);
             }
-        }
-        int success_signal = 0;
-        if (sendto(sockfd, &success_signal, sizeof(success_signal), 0, (struct sockaddr *)&client_addr, client_addr_len) == -1) {
-            perror("Sendto failed");
-            close(sockfd);
-            exit(EXIT_FAILURE);
+        }else if(size >0) {
+            int success_signal = 0;
+            if (sendto(sockfd, &success_signal, sizeof(success_signal), 0, (struct sockaddr *) &client_addr,
+                       client_addr_len) == -1) {
+                perror("Sendto failed");
+                close(sockfd);
+                exit(EXIT_FAILURE);
+            }
         }
         procces_client_data(&gamedata,clientdata);
         process_bullets(&gamedata);
