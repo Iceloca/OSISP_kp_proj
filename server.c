@@ -125,22 +125,23 @@ void start_lobby(int sockfd,struct sockaddr_in* client_addr_1,struct sockaddr_in
             close(sockfd);
             exit(EXIT_FAILURE);
         }
-        printf("%c \n", signal);
+        printf("Signal :%c \n", signal);
         switch (signal) {
             case '0':
                 break;
             case '1':
                 if (player != '1' && player < '3') {
                     player += 1;
-                    *client_addr_1 = new_client_addr;
-                }
 
+                }
+                *client_addr_1 = new_client_addr;
                 break;
             case '2':
                 if (player != '2' && player < '3') {
                     player += 2;
-                    *client_addr_2 = new_client_addr;
+
                 }
+                *client_addr_2 = new_client_addr;
                 break;
             case 'r':
                 player = '0';
@@ -155,12 +156,14 @@ void start_lobby(int sockfd,struct sockaddr_in* client_addr_1,struct sockaddr_in
             if (sendto(sockfd, &signal, sizeof(signal), 0, (struct sockaddr *) client_addr_1,
                        sizeof(*client_addr_1)) == -1) {
                 perror("Sendto failed");
+                printf("%d", errno);
                 close(sockfd);
                 exit(EXIT_FAILURE);
             }
             if (sendto(sockfd, &signal, sizeof(signal), 0, (struct sockaddr *) client_addr_2,
                        sizeof(*client_addr_2)) == -1) {
                 perror("Sendto failed");
+                printf("%d", errno);
                 close(sockfd);
                 exit(EXIT_FAILURE);
             }
@@ -168,12 +171,15 @@ void start_lobby(int sockfd,struct sockaddr_in* client_addr_1,struct sockaddr_in
         }else{
             if (sendto(sockfd, &player, sizeof(player), 0, (struct sockaddr *) &new_client_addr,
                        sizeof(new_client_addr)) == -1) {
+                printf("%d", errno);
                 perror("Sendto failed");
                 close(sockfd);
                 exit(EXIT_FAILURE);
             }
+            printf("Player :%c \n", player);
+            signal = '0';
         }
-    }while (signal != 'r');
+    }while (signal != 's');
 
 }
 
@@ -186,8 +192,8 @@ int main() {
     size_t size = 0;
     sockfd = init_server_socket();
     start_lobby(sockfd, &client_addr_1, &client_addr_2);
-    if(fcntl(sockfd,F_SETFL, O_NONBLOCK) == -1)
-        perror("NON_BLOCK error");
+    //if(fcntl(sockfd,F_SETFL, O_NONBLOCK) == -1)
+    //    perror("NON_BLOCK error");
     printf("Server listening on port %d...\n", PORT);
     while(1) {
         // Receive number from client
@@ -196,35 +202,45 @@ int main() {
         if (size == -1) {
             if( errno != EWOULDBLOCK) {
                 perror("Receive error");
-                close(sockfd);
-                exit(EXIT_FAILURE);
+                //close(sockfd);
+                //exit(EXIT_FAILURE);
             }
         }else if(size >0) {
             int success_signal = 0;
             if (sendto(sockfd, &success_signal, sizeof(success_signal), 0, (struct sockaddr *) &client_addr,
                        client_addr_len) == -1) {
-                perror("Sendto failed");
-                close(sockfd);
-                exit(EXIT_FAILURE);
+                perror("Sendto failed check");
+                printf("%d", errno);
+                //exit(EXIT_FAILURE);
             }
         }
         procces_client_data(&gamedata,clientdata);
         process_bullets(&gamedata);
-        if (sendto(sockfd, &gamedata, sizeof(gamedata), 0, (struct sockaddr *) &client_addr_1, sizeof(client_addr_1)) ==
+        if (sendto(sockfd, &gamedata, sizeof(gamedata), 0, (struct sockaddr *) &client_addr, client_addr_len) ==
             -1) {
-            perror("Sendto failed");
-            close(sockfd);
-            exit(EXIT_FAILURE);
+            perror("Sendto failed player 1");
+            printf("%d", errno);
+            //close(sockfd);
+            //exit(EXIT_FAILURE);
         }
 
-        printf(" %d , %d \n", gamedata.player1.coordinates.x, gamedata.player1.coordinates.y);
-
-        if (sendto(sockfd, &gamedata, sizeof(gamedata), 0, (struct sockaddr *) &client_addr_2,
-                   sizeof(client_addr_2)) == -1) {
-            perror("Sendto failed");
-            close(sockfd);
-            exit(EXIT_FAILURE);
-        }
+//        if (sendto(sockfd, &gamedata, sizeof(gamedata), 0, (struct sockaddr *) &client_addr_1, sizeof(client_addr_1)) ==
+//            -1) {
+//            perror("Sendto failed player 1");
+//            printf("%d", errno);
+//            //close(sockfd);
+//            //exit(EXIT_FAILURE);
+//        }
+//
+//        printf(" %d , %d \n", gamedata.player1.coordinates.x, gamedata.player1.coordinates.y);
+//
+//        if (sendto(sockfd, &gamedata, sizeof(gamedata), 0, (struct sockaddr *) &client_addr_2,
+//                   sizeof(client_addr_2)) == -1) {
+//            perror("Sendto failed player 2");
+//            printf("%d", errno);
+//            //close(sockfd);
+//            //exit(EXIT_FAILURE);
+//        }
         printf(" %d , %d \n", gamedata.player2.coordinates.x, gamedata.player2.coordinates.y);
 
 
