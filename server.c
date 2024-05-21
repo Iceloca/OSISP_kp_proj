@@ -6,15 +6,65 @@
 #include <arpa/inet.h>
 #include <fcntl.h>
 #include <errno.h>
-#include "structures.h"
+#include "server_structures.h"
 #define PORT 12345
 #define BUFFER_SIZE 1024
-#define BORDER_MAX_SIZE 1028
+#define BORDER_MAX_SIZE_Y 1028
+#define BORDER_MAX_SIZE_X 1920
+#define UPDATE_INTERVAL 6 // Интервал обновления
+#define MAX_BOSS_SPEED 3.0 // Максимальная скорость босса
+#include <stdlib.h>
+#include <sys/time.h>
+#include <math.h>
+#include <stdlib.h>
+#include <time.h>
 
-gamedata_t initialise(void) {
-    gamedata_t gamedata = {0};
+long get_current_time_ms() {
+    struct timeval tv;
+    gettimeofday(&tv, NULL);
+    return tv.tv_sec * 1000 + tv.tv_usec / 1000;
+}
+
+void move_boss(entity_t* boss) {
+    static float angle = 0.0f;
+    static float speed = 0.0f;
+    static int delay_random = 0;
+    static int update_interval = 0;
+    static long last_rand_update_time = 0;
+    // Получение текущего времени в миллисекундах
+    long current_time = time(NULL);
+    static long last_update_time_ms = 0;
+    // Получение текущего времени в миллисекундах
+    long current_time_ms = get_current_time_ms();
+    // Обновление угла и скорости через определённые промежутки времени
+    if (current_time - last_rand_update_time> update_interval) {
+        srand(time(NULL));
+        angle = ((float)rand() / RAND_MAX) * 2 * M_PI;
+        speed = ((float)rand() / RAND_MAX) * MAX_BOSS_SPEED;
+        update_interval = rand() % UPDATE_INTERVAL;
+        printf("speed :%f \n", speed);
+        printf("%ld \n", last_rand_update_time);
+        last_rand_update_time = current_time;
+    }
+    // Вычисление новых координат босса
+    if(current_time_ms - last_update_time_ms > 50) {
+        boss->coordinates.x += speed * cos(angle);
+        boss->coordinates.y += speed * sin(angle);
+        last_update_time_ms = current_time_ms;
+        // Ограничения для движения босса по границам поля
+        if (boss->coordinates.x < 0) boss->coordinates.x = 0;
+        if (boss->coordinates.x > BORDER_MAX_SIZE_X) boss->coordinates.x = BORDER_MAX_SIZE_X;
+        if (boss->coordinates.y < 0) boss->coordinates.y = 0;
+        if (boss->coordinates.y > BORDER_MAX_SIZE_Y) boss->coordinates.y = BORDER_MAX_SIZE_Y;
+        printf("x: %f  y: %f \n", boss->coordinates.x, boss->coordinates.x);
+    }
+}
+
+
+game_data_t initialise(void) {
+    game_data_t gamedata = {0};
     gamedata.boss.type = 'b';
-    gamedata.boss.coordinates = (struct  coordinate){256,0};
+    gamedata.boss.coordinates = (struct  coordinate){256,256};
     gamedata.player1.type = '1';
     gamedata.player1.coordinates = (struct coordinate){0,0};
     gamedata.player2.type = '1';
@@ -42,13 +92,13 @@ int process_bullet_hit(entity_t* entity, bullet_t bullet) {
 int move_bullet(bullet_t* bullet) {
     bullet->coordinates.x += bullet->vector.x;
     bullet->coordinates.y += bullet->vector.y;
-    if (bullet->coordinates.x < 0 || bullet->coordinates.x < BORDER_MAX_SIZE )
+    if (bullet->coordinates.x < 0 || bullet->coordinates.x < BORDER_MAX_SIZE_X )
         return 1;
-    if (bullet->coordinates.y < 0 || bullet->coordinates.y < BORDER_MAX_SIZE )
+    if (bullet->coordinates.y < 0 || bullet->coordinates.y < BORDER_MAX_SIZE_Y )
         return 1;
     return  0;
 }
-void process_bullets(gamedata_t* gamedata) {
+void process_bullets(game_data_t* gamedata) {
     int step = 0;
     int i ;
     for(i = 0; (i + step < MAX_BULLETS) && bullet_empty(gamedata->bullets[i + step]); i ++) {
@@ -76,7 +126,7 @@ void push_bullet(bullet_t* bullets,bullet_t bullet) {
         bullets[i] = bullet;
 }
 
-void procces_client_data (gamedata_t* gamedata, clientdata_t clientdata) {
+void procces_client_data (game_data_t* gamedata, client_data_t clientdata) {
     if (clientdata.player.type == '1')
         gamedata->player1 = clientdata.player;
     if (clientdata.player.type == '2')
@@ -187,10 +237,14 @@ int main() {
     int sockfd;
     struct sockaddr_in server_addr, client_addr, client_addr_1, client_addr_2;
     socklen_t client_addr_len = sizeof(client_addr);
-    gamedata_t gamedata;
-    clientdata_t clientdata;
+    game_data_t gamedata;
+    client_data_t clientdata;
     size_t size = 0;
     sockfd = init_server_socket();
+    gamedata = initialise();
+    while (1){
+        move_boss(&gamedata.boss);
+    }
     start_lobby(sockfd, &client_addr_1, &client_addr_2);
     //if(fcntl(sockfd,F_SETFL, O_NONBLOCK) == -1)
     //    perror("NON_BLOCK error");
@@ -216,31 +270,25 @@ int main() {
         }
         procces_client_data(&gamedata,clientdata);
         process_bullets(&gamedata);
-        if (sendto(sockfd, &gamedata, sizeof(gamedata), 0, (struct sockaddr *) &client_addr, client_addr_len) ==
-            -1) {
-            perror("Sendto failed player 1");
-            printf("%d", errno);
-            //close(sockfd);
-            //exit(EXIT_FAILURE);
-        }
-
-//        if (sendto(sockfd, &gamedata, sizeof(gamedata), 0, (struct sockaddr *) &client_addr_1, sizeof(client_addr_1)) ==
+//        if (sendto(sockfd, &gamedata, sizeof(gamedata), 0, (struct sockaddr *) &client_addr, client_addr_len) ==
 //            -1) {
 //            perror("Sendto failed player 1");
 //            printf("%d", errno);
-//            //close(sockfd);
-//            //exit(EXIT_FAILURE);
 //        }
-//
-//        printf(" %d , %d \n", gamedata.player1.coordinates.x, gamedata.player1.coordinates.y);
-//
-//        if (sendto(sockfd, &gamedata, sizeof(gamedata), 0, (struct sockaddr *) &client_addr_2,
-//                   sizeof(client_addr_2)) == -1) {
-//            perror("Sendto failed player 2");
-//            printf("%d", errno);
-//            //close(sockfd);
-//            //exit(EXIT_FAILURE);
-//        }
+
+        if (sendto(sockfd, &gamedata, sizeof(gamedata), 0, (struct sockaddr *) &client_addr_1, sizeof(client_addr_1)) ==
+            -1) {
+            perror("Sendto failed player 1");
+            printf("%d", errno);
+        }
+
+        printf(" %d , %d \n", gamedata.player1.coordinates.x, gamedata.player1.coordinates.y);
+
+        if (sendto(sockfd, &gamedata, sizeof(gamedata), 0, (struct sockaddr *) &client_addr_2,
+                   sizeof(client_addr_2)) == -1) {
+            perror("Sendto failed player 2");
+            printf("%d", errno);
+        }
         printf(" %d , %d \n", gamedata.player2.coordinates.x, gamedata.player2.coordinates.y);
 
 
